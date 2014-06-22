@@ -108,10 +108,12 @@ foreach $ifile (@ARGV) {
 
       # process the full-size tile
       $dib = &read_dib;
+#      &write_dib("$ofbase.f.dib", $dib) if ($full);
       &write_png("$ofbase.f.png", $dib) if ($full);
 
       # process the half-size tile
       $dib = &read_dib;
+#      &write_dib("$ofbase.h.dib", $dib) if ($half);
       &write_png("$ofbase.h.png", $dib) if ($half);
    }
 
@@ -129,35 +131,45 @@ sub read_dib {
    return $blob;
 }
 
+sub write_dib {
+  my ($ofile, $blob) = @_;
+  open OUT, $ofile or die "\n$0: cannot write $ofile: $!\n";
+  print OUT $blob;
+  close OUT;
+}
 
 sub write_png {
    my ($ofile, $blob) = @_;
 
-   if ($vmajor >= 3) {
-      # Cyberboard 3 uses 16-bit 5-6-5 DIBs
-      # build BMP header because ImageMagick chokes
-      # on 16-bit 5-6-5 DIBs:
-      #     14 bytes for the BITMAPFILEHEADER   
-      #     40 bytes for the BITMAPINFOHEADER
-      #     12 bytes for the color masks
-      # so the data is offset by 66 bytes
-      # NB: this should be unnecessary with ImageMagick >= 6.2.7-7
-      $header = pack('A2Lx4L', ('BM', 14 + length $blob, 66));
-      $blob = $header . $blob;
-      $img->Set(magick => 'bmp');
-   }
-   else {
-      $img->Set(magick => 'dib');
-   }
+#   if ($vmajor >= 3) {
+#      # Cyberboard 3 uses 16-bit 5-6-5 DIBs
+#      # build BMP header because ImageMagick chokes
+#      # on 16-bit 5-6-5 DIBs:
+#      #     14 bytes for the BITMAPFILEHEADER
+#      #     40 bytes for the BITMAPINFOHEADER
+#      #     12 bytes for the color masks
+#      # so the data is offset by 66 bytes
+#      # NB: this should be unnecessary with ImageMagick >= 6.2.7-7
+#      $header = pack('A2Lx4L', ('BM', 14 + length $blob, 66));
+#      $blob = $header . $blob;
+#      $img->Set(magick => 'bmp');
+#   }
+#   else {
+#      $img->Set(magick => 'dib');
+#   }
+
+   $img->Set(magick => 'dib');
 
    # write the tile as a PNG
    my $err = $img->BlobToImage(($blob));
    die "\n$0: ImageMagick error: $err\n" if "$err";
    
-   open OUT, $ofile or die "\n$0: cannot write $ofile: $!\n";
+   open OUT, ">$ofile" or die "\n$0: cannot write $ofile: $!\n";
    $err = $img->Write(file => \*OUT, filename => $ofile);
    die "\n$0: ImageMagick error: $err\n" if "$err";
-   close OUT;
+#   close OUT;
    
+# FIXME: remember to "mogrify -transparent '#00FFFF' img.png"
+
    @$img = ();
 }
